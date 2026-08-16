@@ -50,10 +50,16 @@ def main():
     rope_cos = rope_cos.to(dtype=rope_dtype)
     rope_sin = rope_sin.to(dtype=rope_dtype)
 
-    def _frozen_rope_forward(*args, **kwargs):
-        return rope_cos, rope_sin
+    class _FrozenRotary(torch.nn.Module):
+        def __init__(self, cos, sin):
+            super().__init__()
+            self.register_buffer("cos", cos)
+            self.register_buffer("sin", sin)
 
-    type(rotary).forward = _frozen_rope_forward
+        def forward(self, *args, **kwargs):
+            return self.cos, self.sin
+
+    model.model.rotary_emb = _FrozenRotary(rope_cos, rope_sin)
 
     class _LogitsOnly(torch.nn.Module):
         def __init__(self, m):
