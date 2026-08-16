@@ -44,6 +44,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python 3.11 for the SDK wheel
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Prepare ephemeral workspace
         shell: bash
         run: |
@@ -112,7 +117,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m venv "$WORK/venv"
+          python -m venv "$WORK/venv"
           WHEEL=$(find "$WORK/sdk" -type f -name 'mtk_converter-*cp311*.whl' | head -1)
           test -n "$WHEEL"
           "$WORK/venv/bin/python" -m pip install --disable-pip-version-check "$WHEEL"
