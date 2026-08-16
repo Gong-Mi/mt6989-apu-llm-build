@@ -224,6 +224,13 @@ jobs:
           if old not in s:
               raise SystemExit("Qwen3.5 layer loop not found")
           p.write_text(s.replace(old, new))
+          for decorator in [
+              '@use_kernel_forward_from_hub("RMSNormGated")\n',
+              '@use_kernel_func_from_hub_with_fallback("causal_conv1d_fn", "causal_conv1d")\n',
+              '@use_kernel_forward_from_hub("Qwen3_5GatedDeltaNet")\n',
+          ]:
+              s = s.replace(decorator, '')
+          p.write_text(s)
           print("patched_qwen35_torch23_export")
           PY
           mkdir -p out/artifacts
