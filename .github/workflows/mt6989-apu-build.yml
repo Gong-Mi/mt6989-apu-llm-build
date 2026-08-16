@@ -184,17 +184,7 @@ jobs:
             'packaging' 'pyyaml' 'regex' 'requests' 'tqdm' 'numpy' \
             'httpx' 'httpcore' 'h11' 'anyio' 'certifi' 'idna' \
             --no-deps
-          python - <<'PY'
-          from pathlib import Path
-          import site
-          p = Path(site.getsitepackages()[0]) / "transformers" / "utils" / "import_utils.py"
-          s = p.read_text()
-          old = 'TORCH_MINIMUM_VERSION = "2.5.0"'
-          if old not in s:
-              raise SystemExit("transformers torch version guard not found")
-          p.write_text(s.replace(old, 'TORCH_MINIMUM_VERSION = "2.3.0"'))
-          print("patched_transformers_torch_guard", p)
-          PY
+          export TRANSFORMERS_DISABLE_TORCH_CHECK=1
           mkdir -p out/artifacts
           python scripts/export_hf_qwen.py \
             --model "$WORK/model/repo" \
