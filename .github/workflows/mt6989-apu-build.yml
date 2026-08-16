@@ -247,7 +247,7 @@ jobs:
           python scripts/export_hf_qwen.py \
             --model "$WORK/model/repo" \
             --output out/artifacts/qwen-exported-program.pt2
-          python - <<'PY'
+          "$WORK/venv/bin/python" - <<'PY'
           import torch
           from packaging.version import Version
           import mtk_converter.env as e
