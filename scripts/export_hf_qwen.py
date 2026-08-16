@@ -38,20 +38,21 @@ def main():
     input_ids = torch.ones((1, args.seq_len), dtype=torch.long)
     print("loaded_parameters", sum(p.numel() for p in model.parameters()))
     print("export_start")
-    def _forward_with_positions(m, input_ids):
-        # Pre-compute RoPE tables once and pass them through, so the exported
-        # graph contains plain mul/add (rotate_half) instead of aten::cos/sin.
-        rotary = m.model.rotary_emb
-        position_ids = torch.arange(input_ids.shape[1], dtype=torch.long).unsqueeze(0)
-        cos, sin = rotary(input_ids, position_ids)
-        cos = cos.to(torch.float32)
-        sin = sin.to(torch.float32)
-        out = m.model(
-            input_ids=input_ids,
-            position_embeddings=(cos, sin),
-            use_cache=False,
-        )
-        return m.lm_head(out.last_hidden_state)
+
+    # Freeze RoPE tables as constants: the exported graph then contains plain
+    # mul/add (rotate_half) instead of aten::cos/aten::sin/aten::pow/exp,
+    # which the mtk pytorch importer does not support.
+    rotary = model.model.rotary_emb
+    position_ids = torch.arange(args.seq_len, dtype=torch.long).unsqueeze(0)
+    with torch.no_grad():
+        rope_cos, rope_sin = rotary(input_ids, position_ids)
+    rope_cos = rope_cos.to(torch.float32)
+    rope_sin = rope_sin.to(torch.float32)
+
+    def _frozen_rope_forward(*args, **kwargs):
+        return rope_cos, rope_sin
+
+    type(rotary).forward = _frozen_rope_forward
 
     class _LogitsOnly(torch.nn.Module):
         def __init__(self, m):
@@ -59,7 +60,8 @@ def main():
             self.m = m
 
         def forward(self, input_ids):
-            return _forward_with_positions(self.m, input_ids)
+            out = self.m(input_ids=input_ids, use_cache=False)
+            return out.logits
 
     exported = torch.export.export(
         _LogitsOnly(model),
