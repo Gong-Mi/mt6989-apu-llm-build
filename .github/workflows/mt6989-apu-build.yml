@@ -170,6 +170,18 @@ jobs:
           cp tests/models/float_bmm.tflite out/artifacts/
           sha256sum out/artifacts/float_bmm.tflite | tee out/artifacts.sha256
 
+      - name: Attempt Qwen Hugging Face to ExportedProgram conversion
+        if: ${{ inputs.mode == 'build' && inputs.model_repo != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check \
+            'torch' 'transformers>=4.57.0' 'accelerate'
+          mkdir -p out/artifacts
+          python scripts/export_hf_qwen.py \
+            --model "$WORK/model/repo" \
+            --output out/artifacts/qwen-exported-program.pt2
+
       - name: Package large build outputs in 512 MiB chunks
         if: ${{ inputs.mode == 'package' }}
         shell: bash
