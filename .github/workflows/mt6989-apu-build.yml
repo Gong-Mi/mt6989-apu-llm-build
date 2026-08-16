@@ -188,7 +188,8 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import site
-          p = Path(site.getsitepackages()[0]) / "transformers" / "utils" / "import_utils.py"
+          root = Path(site.getsitepackages()[0]) / "transformers"
+          p = root / "utils" / "import_utils.py"
           s = p.read_text()
           old1 = 'parsed_version < version.parse("2.5.0")'
           old2 = 'version.parse(torch_version) >= version.parse("2.5.0")'
@@ -197,7 +198,13 @@ jobs:
           s = s.replace(old1, 'parsed_version < version.parse("2.3.0")')
           s = s.replace(old2, 'version.parse(torch_version) >= version.parse("2.3.0")')
           p.write_text(s)
-          print("patched_transformers_torch_availability", p)
+          p = root / "distributed" / "sharding_utils.py"
+          s = p.read_text()
+          old = "if is_torch_distributed_available():"
+          if old not in s:
+              raise SystemExit("transformers DTensor guard not found")
+          p.write_text(s.replace(old, 'if is_torch_distributed_available() and hasattr(torch.distributed.tensor, "DTensor"):'))
+          print("patched_transformers_torch23_compat")
           PY
           mkdir -p out/artifacts
           python scripts/export_hf_qwen.py \
