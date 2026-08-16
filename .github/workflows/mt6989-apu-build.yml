@@ -219,11 +219,11 @@ jobs:
           p.write_text(s.replace(old, new))
           p = root / "models" / "qwen3_5" / "modeling_qwen3_5.py"
           s = p.read_text()
-          old = "for i, decoder_layer in enumerate(self.layers[: self.config.num_hidden_layers]):"
-          new = "for i, decoder_layer in enumerate(self.layers):"
+          s = s.replace("self.layers[: self.config.num_hidden_layers]", "self.layers")
+          old = "for i, decoder_layer in enumerate(self.layers):"
           if old not in s:
               raise SystemExit("Qwen3.5 layer loop not found")
-          p.write_text(s.replace(old, new))
+          p.write_text(s)
           for decorator in [
               '@use_kernel_forward_from_hub("RMSNormGated")\n',
               '@use_kernel_func_from_hub_with_fallback("causal_conv1d_fn", "causal_conv1d")\n',
