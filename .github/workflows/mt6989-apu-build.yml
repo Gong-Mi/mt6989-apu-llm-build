@@ -185,6 +185,20 @@ jobs:
             'httpx' 'httpcore' 'h11' 'anyio' 'certifi' 'idna' \
             --no-deps
           export TRANSFORMERS_DISABLE_TORCH_CHECK=1
+          python - <<'PY'
+          from pathlib import Path
+          import site
+          p = Path(site.getsitepackages()[0]) / "transformers" / "utils" / "import_utils.py"
+          s = p.read_text()
+          old1 = 'parsed_version < version.parse("2.5.0")'
+          old2 = 'version.parse(torch_version) >= version.parse("2.5.0")'
+          if old1 not in s or old2 not in s:
+              raise SystemExit("transformers torch availability checks not found")
+          s = s.replace(old1, 'parsed_version < version.parse("2.3.0")')
+          s = s.replace(old2, 'version.parse(torch_version) >= version.parse("2.3.0")')
+          p.write_text(s)
+          print("patched_transformers_torch_availability", p)
+          PY
           mkdir -p out/artifacts
           python scripts/export_hf_qwen.py \
             --model "$WORK/model/repo" \
