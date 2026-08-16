@@ -107,14 +107,20 @@ jobs:
             | sort | while read -r f; do file "$f"; done
           # Do not execute an SDK-bundled service during the audit job.
 
-      - name: Build-mode placeholder gate
-        if: ${{ inputs.mode == 'build' }}
+      - name: Install and smoke-test the official host converter
+        if: ${{ inputs.mode == 'build' || inputs.mode == 'package' }}
         shell: bash
         run: |
           set -euo pipefail
-          echo 'SDK fetched and verified.'
-          echo 'The next build step must be selected after the archive layout is recorded.'
-          echo 'No proprietary compiler service is executed implicitly.'
+          python3 -m venv "$WORK/venv"
+          WHEEL=$(find "$WORK/sdk" -type f -name 'mtk_converter-*cp311*.whl' | head -1)
+          test -n "$WHEEL"
+          "$WORK/venv/bin/python" -m pip install --disable-pip-version-check "$WHEEL"
+          "$WORK/venv/bin/python" -c 'import mtk_converter; print("mtk_converter_import=ok")'
+          "$WORK/venv/bin/mtk_dissect_tflite_model" --help > out/mtk_dissect_tflite_model.help.txt
+          mkdir -p out/artifacts
+          cp tests/models/float_bmm.tflite out/artifacts/
+          sha256sum out/artifacts/float_bmm.tflite | tee out/artifacts.sha256
 
       - name: Package large build outputs in 512 MiB chunks
         if: ${{ inputs.mode == 'package' }}
