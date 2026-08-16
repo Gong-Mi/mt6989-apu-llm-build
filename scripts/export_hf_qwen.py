@@ -2,7 +2,6 @@
 import argparse
 import json
 import os
-import types
 from pathlib import Path
 
 import torch
@@ -40,9 +39,8 @@ def main():
     print("loaded_parameters", sum(p.numel() for p in model.parameters()))
     print("export_start")
 
-    # Freeze RoPE tables as constants: the exported graph then contains plain
-    # mul/add (rotate_half) instead of aten::cos/aten::sin/aten::pow/exp,
-    # which the mtk pytorch importer does not support.
+    # Export the decoder path directly.  This avoids the Transformers forward
+    # wrapper's dynamic mask/rope preparation and lets us pass fixed RoPE tables.
     rotary = model.model.rotary_emb
     position_ids = torch.arange(args.seq_len, dtype=torch.long).unsqueeze(0)
     with torch.no_grad():
@@ -51,22 +49,29 @@ def main():
     rope_cos = rope_cos.to(dtype=rope_dtype)
     rope_sin = rope_sin.to(dtype=rope_dtype)
 
-    def _frozen_rope_forward(_self, *args, **kwargs):
-        return rope_cos, rope_sin
-
-    rotary.forward = types.MethodType(_frozen_rope_forward, rotary)
-
-    class _LogitsOnly(torch.nn.Module):
-        def __init__(self, m):
+    class _DirectLogits(torch.nn.Module):
+        def __init__(self, m, pos_emb):
             super().__init__()
             self.m = m
+            self.register_buffer("rope_cos", pos_emb[0])
+            self.register_buffer("rope_sin", pos_emb[1])
 
         def forward(self, input_ids):
-            out = self.m(input_ids=input_ids, use_cache=False)
-            return out.logits
+            hidden_states = self.m.model.embed_tokens(input_ids)
+            position_embeddings = (self.rope_cos, self.rope_sin)
+            for layer in self.m.model.layers:
+                hidden_states = layer(
+                    hidden_states,
+                    attention_mask=None,
+                    position_ids=None,
+                    use_cache=False,
+                    position_embeddings=position_embeddings,
+                )
+            hidden_states = self.m.model.norm(hidden_states)
+            return self.m.lm_head(hidden_states)
 
     exported = torch.export.export(
-        _LogitsOnly(model),
+        _DirectLogits(model, (rope_cos, rope_sin)),
         args=(input_ids,),
         strict=False,
     )
