@@ -179,7 +179,7 @@ jobs:
             'torch==2.3.1' \
             --index-url https://download.pytorch.org/whl/cpu
           python -m pip install --disable-pip-version-check \
-            'transformers>=4.57.0' 'accelerate'
+            'transformers==4.57.1' 'accelerate'
           mkdir -p out/artifacts
           python scripts/export_hf_qwen.py \
             --model "$WORK/model/repo" \
