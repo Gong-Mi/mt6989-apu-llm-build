@@ -116,14 +116,15 @@ jobs:
           echo 'The next build step must be selected after the archive layout is recorded.'
           echo 'No proprietary compiler service is executed implicitly.'
 
-      - name: Package large outputs in 512 MiB chunks
+      - name: Package large build outputs in 512 MiB chunks
         if: ${{ inputs.mode == 'package' }}
         shell: bash
         run: |
           set -euo pipefail
-          tar -czf out/input-bundle.tar.gz "$WORK/downloads" "$WORK/sdk" "$WORK/model"
-          python3 scripts/package_chunks.py out/input-bundle.tar.gz out/chunks 512
-          rm -f out/input-bundle.tar.gz
+          test -d out/artifacts
+          tar -czf out/build-artifacts.tar.gz -C out/artifacts .
+          python3 scripts/package_chunks.py out/build-artifacts.tar.gz out/chunks 512
+          rm -f out/build-artifacts.tar.gz
 
       - name: Upload public build evidence
         uses: actions/upload-artifact@v4
