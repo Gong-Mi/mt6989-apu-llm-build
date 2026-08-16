@@ -233,7 +233,17 @@ jobs:
           s = s.replace("out = ACT2FN[activation](out)", "out = torch.nn.functional.silu(out) if activation == \"silu\" else ACT2FN[activation](out)")
           s = s.replace("ACT2FN[self.activation](gate.to(torch.float32))", "torch.nn.functional.silu(gate.to(torch.float32)) if self.activation == \"silu\" else ACT2FN[self.activation](gate.to(torch.float32))")
           p.write_text(s)
-          print("patched_qwen35_torch23_export")
+          import torch as _torch
+          p = Path(_torch.__file__).parent / "_export" / "serde" / "serialize.py"
+          s = p.read_text()
+          old = 'elif arg.type in ("as_none", "as_int", "as_float", "as_string", "as_custom_obj"): '
+          new = 'elif arg.type in ("as_none", "as_int", "as_float", "as_string", "as_bool", "as_custom_obj"): '
+          if old not in s:
+              old = 'elif arg.type in ("as_none", "as_int", "as_float", "as_string", "as_custom_obj"): '
+          if old not in s:
+              raise SystemExit("torch export bool argument branch not found")
+          p.write_text(s.replace(old, new))
+          print("patched_torch23_export_bool_argument")
           PY
           mkdir -p out/artifacts
           python scripts/export_hf_qwen.py \
