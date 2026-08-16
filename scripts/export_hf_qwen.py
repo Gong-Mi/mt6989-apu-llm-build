@@ -7,6 +7,12 @@ from pathlib import Path
 import torch
 if not hasattr(torch.nn, "Buffer"):
     torch.nn.Buffer = lambda data, persistent=True: torch.nn.Parameter(data, requires_grad=False)
+_torch_is_autocast_enabled = torch.is_autocast_enabled
+if not getattr(_torch_is_autocast_enabled, "_accepts_device_type", False):
+    def _compat_is_autocast_enabled(device_type=None):
+        return _torch_is_autocast_enabled()
+    _compat_is_autocast_enabled._accepts_device_type = True
+    torch.is_autocast_enabled = _compat_is_autocast_enabled
 from transformers import AutoModelForImageTextToText
 
 
