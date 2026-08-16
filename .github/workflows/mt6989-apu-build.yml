@@ -247,6 +247,25 @@ jobs:
           python scripts/export_hf_qwen.py \
             --model "$WORK/model/repo" \
             --output out/artifacts/qwen-exported-program.pt2
+          python - <<'PY'
+          import torch
+          from packaging.version import Version
+          import mtk_converter.env as e
+          print("converter_diag torch", torch.__version__, torch.__file__)
+          print("converter_diag export", hasattr(torch, "export"), getattr(torch.export, "ExportedProgram", None))
+          print("converter_diag parsed", Version(torch.__version__), Version("2.1.0"), Version("2.4.0"), Version("2.1.0") <= Version(torch.__version__) < Version("2.4.0"))
+          print("converter_diag constants", e.TORCH_V2_MIN_VERSION, e.TORCH_V2_MAX_VERSION)
+          @e._ensure_torch_v2_installed()
+          def _diag():
+              print("converter_diag decorator_passed")
+          try:
+              _diag()
+          except BaseException as exc:
+              import traceback
+              print("converter_diag decorator_failed", type(exc).__name__, repr(exc))
+              traceback.print_exc()
+              raise
+          PY
           "$WORK/venv/bin/mtk_pytorch_v2_converter" \
             --input_exported_program_file out/artifacts/qwen-exported-program.pt2 \
             --output_file out/artifacts/qwen3.5-2b.tflite \
