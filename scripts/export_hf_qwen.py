@@ -43,7 +43,7 @@ def main():
         # graph contains plain mul/add (rotate_half) instead of aten::cos/sin.
         rotary = m.model.rotary_emb
         position_ids = torch.arange(input_ids.shape[1], dtype=torch.long).unsqueeze(0)
-        cos, sin = rotary(hidden_states=input_ids, position_ids=position_ids)
+        cos, sin = rotary(input_ids, position_ids)
         cos = cos.to(torch.float32)
         sin = sin.to(torch.float32)
         out = m.model(
