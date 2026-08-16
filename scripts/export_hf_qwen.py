@@ -5,8 +5,8 @@ import os
 from pathlib import Path
 
 import torch
-if not hasattr(torch.nn, "Buffer") and hasattr(torch.nn.parameter, "Buffer"):
-    torch.nn.Buffer = torch.nn.parameter.Buffer
+if not hasattr(torch.nn, "Buffer"):
+    torch.nn.Buffer = lambda data, persistent=True: torch.nn.Parameter(data, requires_grad=False)
 from transformers import AutoModelForImageTextToText
 
 
