@@ -283,7 +283,7 @@ jobs:
           "$WORK/venv/bin/mtk_pytorch_v2_converter" \
             --input_exported_program_file out/artifacts/qwen-exported-program.pt2 \
             --output_file out/artifacts/qwen3.5-2b.tflite \
-            --input_shapes 1,16
+            --input_shapes 1,16:1,16
 
       - name: Package large build outputs in 512 MiB chunks
         if: ${{ inputs.mode == 'package' }}
