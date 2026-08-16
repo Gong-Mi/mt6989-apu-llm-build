@@ -212,8 +212,8 @@ jobs:
           p.write_text(s.replace(old, 'if is_torch_available() and hasattr(torch.library, "custom_op"):\n    torch.library.custom_op('))
           p = root / "distributed" / "utils.py"
           s = p.read_text()
-          old = "def is_dtensor(obj) -> bool:\\n    if not is_torch_distributed_available():\\n        return False\\n    from torch.distributed.tensor import DTensor\\n"
-          new = "def is_dtensor(obj) -> bool:\\n    if not is_torch_distributed_available():\\n        return False\\n    try:\\n        from torch.distributed.tensor import DTensor\\n    except ImportError:\\n        return False\\n"
+          old = "def is_dtensor(obj) -> bool:\n    if not is_torch_distributed_available():\n        return False\n    from torch.distributed.tensor import DTensor\n"
+          new = "def is_dtensor(obj) -> bool:\n    if not is_torch_distributed_available():\n        return False\n    try:\n        from torch.distributed.tensor import DTensor\n    except ImportError:\n        return False\n"
           if old not in s:
               raise SystemExit("transformers is_dtensor helper not found")
           p.write_text(s.replace(old, new))
