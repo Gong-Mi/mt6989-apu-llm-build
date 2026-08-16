@@ -53,6 +53,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo '=== runner identity ==='
+          uname -a
+          uname -m
+          nproc
+          free -h
+          echo '=== filesystems ==='
+          df -hT
+          echo '=== byte capacities ==='
+          df -B1 /
+          df -B1 "$RUNNER_TEMP" || true
           mkdir -p "$WORK/downloads" "$WORK/sdk" "$WORK/model" out
           printf 'runner=%s\n' "$RUNNER_NAME"
           printf 'mode=%s\n' "$MODE"
