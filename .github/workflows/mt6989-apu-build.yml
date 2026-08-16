@@ -1,0 +1,139 @@
+name: MT6989 APU build
+
+on:
+  workflow_dispatch:
+    inputs:
+      sdk_url:
+        description: 'Final direct NeuroPilot SDK archive URL (not the docs page)'
+        required: true
+        type: string
+      sdk_sha256:
+        description: 'Expected SDK archive SHA-256 (optional for audit)'
+        required: false
+        type: string
+      model_url:
+        description: 'Optional direct public model/precompiled MT6989 model URL'
+        required: false
+        type: string
+      model_sha256:
+        description: 'Expected model SHA-256'
+        required: false
+        type: string
+      mode:
+        description: 'audit, build, or package'
+        required: true
+        default: audit
+        type: choice
+        options: [audit, build, package]
+
+permissions:
+  contents: read
+
+jobs:
+  fetch-and-build:
+    # Public repositories receive the larger standard Linux runner.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    env:
+      MODE: ${{ inputs.mode }}
+      SDK_URL: ${{ inputs.sdk_url }}
+      SDK_SHA256: ${{ inputs.sdk_sha256 }}
+      MODEL_URL: ${{ inputs.model_url }}
+      MODEL_SHA256: ${{ inputs.model_sha256 }}
+      WORK: ${{ runner.temp }}/mt6989-apu
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare ephemeral workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$WORK/downloads" "$WORK/sdk" "$WORK/model" out
+          printf 'runner=%s\n' "$RUNNER_NAME"
+          printf 'mode=%s\n' "$MODE"
+          test -n "$SDK_URL"
+
+      - name: Download official SDK archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 4 --retry-delay 3 \
+            --proto '=https' --tlsv1.2 \
+            "$SDK_URL" -o "$WORK/downloads/neuro-sdk.archive"
+          test -s "$WORK/downloads/neuro-sdk.archive"
+          sha256sum "$WORK/downloads/neuro-sdk.archive" | tee out/sdk.sha256
+          if [[ -n "$SDK_SHA256" ]]; then
+            echo "$SDK_SHA256  $WORK/downloads/neuro-sdk.archive" | sha256sum -c -
+          fi
+
+      - name: Verify and unpack SDK without executing bundled binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          gzip -t "$WORK/downloads/neuro-sdk.archive"
+          tar -tzf "$WORK/downloads/neuro-sdk.archive" > out/sdk-members.txt
+          tar -xzf "$WORK/downloads/neuro-sdk.archive" -C "$WORK/sdk"
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path('out/sdk-members.txt')
+          lines = root.read_text(errors='replace').splitlines()
+          for needle in ('NeuronAdapter.h', 'mtk_neuron', 'mtk_converter', 'nir-compilation-service'):
+              hits = [x for x in lines if needle.lower() in x.lower()]
+              print(f'{needle}: {len(hits)}')
+              for x in hits[:8]: print('  '+x)
+          PY
+
+      - name: Download optional model
+        if: ${{ inputs.model_url != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 4 --retry-delay 3 \
+            --proto '=https' --tlsv1.2 \
+            "$MODEL_URL" -o "$WORK/model/model.input"
+          test -s "$WORK/model/model.input"
+          sha256sum "$WORK/model/model.input" | tee out/model.sha256
+          if [[ -n "$MODEL_SHA256" ]]; then
+            echo "$MODEL_SHA256  $WORK/model/model.input" | sha256sum -c -
+          fi
+
+      - name: Record host toolchain boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          uname -a
+          python3 --version
+          find "$WORK/sdk" -type f -name '*.whl' -o -name 'nir-compilation-service' \
+            | sort | while read -r f; do file "$f"; done
+          # Do not execute an SDK-bundled service during the audit job.
+
+      - name: Build-mode placeholder gate
+        if: ${{ inputs.mode == 'build' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'SDK fetched and verified.'
+          echo 'The next build step must be selected after the archive layout is recorded.'
+          echo 'No proprietary compiler service is executed implicitly.'
+
+      - name: Package large outputs in 512 MiB chunks
+        if: ${{ inputs.mode == 'package' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar -czf out/input-bundle.tar.gz "$WORK/downloads" "$WORK/sdk" "$WORK/model"
+          python3 scripts/package_chunks.py out/input-bundle.tar.gz out/chunks 512
+          rm -f out/input-bundle.tar.gz
+
+      - name: Upload public build evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: mt6989-apu-evidence-${{ github.run_id }}
+          path: out/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Cleanup ephemeral proprietary inputs
+        if: always()
+        shell: bash
+        run: rm -rf "$WORK"
