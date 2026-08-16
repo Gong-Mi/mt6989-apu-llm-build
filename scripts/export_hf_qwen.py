@@ -33,6 +33,7 @@ def main():
         torch_dtype=torch.bfloat16,
         low_cpu_mem_usage=True,
         local_files_only=True,
+        attn_implementation="eager",
     )
     model.eval()
     input_ids = torch.ones((1, args.seq_len), dtype=torch.long)
