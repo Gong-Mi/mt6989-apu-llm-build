@@ -182,6 +182,7 @@ jobs:
             'transformers==5.15.0' 'huggingface-hub>=1.5.0' \
             'tokenizers>=0.22.0' 'safetensors>=0.8.0' 'accelerate' \
             'packaging' 'pyyaml' 'regex' 'requests' 'tqdm' 'numpy' \
+            'httpx' 'httpcore' 'h11' 'anyio' 'certifi' 'idna' \
             --no-deps
           python - <<'PY'
           from pathlib import Path
