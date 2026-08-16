@@ -30,7 +30,7 @@ def main():
 
     model = AutoModelForCausalLM.from_pretrained(
         str(model_dir),
-        torch_dtype=torch.float32,
+        torch_dtype=torch.float16,
         low_cpu_mem_usage=True,
         local_files_only=True,
         attn_implementation="eager",
