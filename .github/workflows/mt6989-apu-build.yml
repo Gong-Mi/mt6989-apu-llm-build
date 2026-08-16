@@ -40,7 +40,7 @@ jobs:
       SDK_SHA256: ${{ inputs.sdk_sha256 }}
       MODEL_URL: ${{ inputs.model_url }}
       MODEL_SHA256: ${{ inputs.model_sha256 }}
-      WORK: ${{ runner.temp }}/mt6989-apu
+      WORK: ${{ github.workspace }}/.mt6989-apu-work
     steps:
       - uses: actions/checkout@v4
 
