@@ -15,6 +15,15 @@ on:
         description: 'Optional direct public model/precompiled MT6989 model URL'
         required: false
         type: string
+      model_repo:
+        description: 'Optional Hugging Face model repo, for example Qwen/Qwen3.5-2B'
+        required: false
+        type: string
+      model_revision:
+        description: 'Hugging Face revision (default main)'
+        required: false
+        default: main
+        type: string
       model_sha256:
         description: 'Expected model SHA-256'
         required: false
@@ -39,6 +48,8 @@ jobs:
       SDK_URL: ${{ inputs.sdk_url }}
       SDK_SHA256: ${{ inputs.sdk_sha256 }}
       MODEL_URL: ${{ inputs.model_url }}
+      MODEL_REPO: ${{ inputs.model_repo }}
+      MODEL_REVISION: ${{ inputs.model_revision }}
       MODEL_SHA256: ${{ inputs.model_sha256 }}
       WORK: ${{ github.workspace }}/.mt6989-apu-work
     steps:
@@ -99,17 +110,37 @@ jobs:
           PY
 
       - name: Download optional model
-        if: ${{ inputs.model_url != '' }}
+        if: ${{ inputs.model_url != '' || inputs.model_repo != '' }}
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --location --retry 4 --retry-delay 3 \
-            --proto '=https' --tlsv1.2 \
-            "$MODEL_URL" -o "$WORK/model/model.input"
-          test -s "$WORK/model/model.input"
-          sha256sum "$WORK/model/model.input" | tee out/model.sha256
-          if [[ -n "$MODEL_SHA256" ]]; then
-            echo "$MODEL_SHA256  $WORK/model/model.input" | sha256sum -c -
+          if [[ -n "$MODEL_REPO" ]]; then
+            git lfs install --local
+            git clone --depth 1 --branch "$MODEL_REVISION" \
+              "https://huggingface.co/$MODEL_REPO" "$WORK/model/repo"
+            git -C "$WORK/model/repo" lfs pull
+            python3 - <<'PY'
+          from pathlib import Path
+          import os
+          root = Path(os.environ["WORK"]) / "model" / "repo"
+          files = [p for p in root.rglob("*") if p.is_file() and p.name.endswith((".safetensors", ".bin"))]
+          if not files:
+              raise SystemExit("no model weight files after git lfs pull")
+          for p in files:
+              b = p.read_bytes()[:128]
+              if b.startswith(b"version https://git-lfs.github.com/spec/v1"):
+                  raise SystemExit(f"LFS pointer remains: {p}")
+              print(f"model_file={p} bytes={p.stat().st_size}")
+          PY
+          elif [[ -n "$MODEL_URL" ]]; then
+            curl --fail --location --retry 4 --retry-delay 3 \
+              --proto '=https' --tlsv1.2 \
+              "$MODEL_URL" -o "$WORK/model/model.input"
+            test -s "$WORK/model/model.input"
+            sha256sum "$WORK/model/model.input" | tee out/model.sha256
+            if [[ -n "$MODEL_SHA256" ]]; then
+              echo "$MODEL_SHA256  $WORK/model/model.input" | sha256sum -c -
+            fi
           fi
 
       - name: Record host toolchain boundary
