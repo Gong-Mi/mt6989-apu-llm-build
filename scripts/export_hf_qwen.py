@@ -39,14 +39,18 @@ def main():
     attention_mask = torch.ones_like(input_ids)
     print("loaded_parameters", sum(p.numel() for p in model.parameters()))
     print("export_start")
+    class _LogitsOnly(torch.nn.Module):
+        def __init__(self, m):
+            super().__init__()
+            self.m = m
+
+        def forward(self, input_ids, attention_mask):
+            out = self.m(input_ids=input_ids, attention_mask=attention_mask, use_cache=False)
+            return out.logits
+
     exported = torch.export.export(
-        model,
-        args=(),
-        kwargs={
-            "input_ids": input_ids,
-            "attention_mask": attention_mask,
-            "use_cache": False,
-        },
+        _LogitsOnly(model),
+        args=(input_ids, attention_mask),
         strict=False,
     )
     torch.export.save(exported, args.output)
