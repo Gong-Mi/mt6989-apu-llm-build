@@ -248,23 +248,37 @@ jobs:
             --model "$WORK/model/repo" \
             --output out/artifacts/qwen-exported-program.pt2
           "$WORK/venv/bin/python" - <<'PY'
+          import traceback
           import torch
           from packaging.version import Version
+          import mtk_converter
           import mtk_converter.env as e
           print("converter_diag torch", torch.__version__, torch.__file__)
-          print("converter_diag export", hasattr(torch, "export"), getattr(torch.export, "ExportedProgram", None))
-          print("converter_diag parsed", Version(torch.__version__), Version("2.1.0"), Version("2.4.0"), Version("2.1.0") <= Version(torch.__version__) < Version("2.4.0"))
+          print("converter_diag parsed_in_range", Version("2.1.0") <= Version(torch.__version__) < Version("2.4.0"))
           print("converter_diag constants", e.TORCH_V2_MIN_VERSION, e.TORCH_V2_MAX_VERSION)
-          @e._ensure_torch_v2_installed()
-          def _diag():
-              print("converter_diag decorator_passed")
+          for name in dir(mtk_converter):
+              if "TORCH" in name or "VERSION" in name:
+                  try:
+                      print("converter_diag pkg_attr", name, repr(getattr(mtk_converter, name)))
+                  except BaseException as exc:
+                      print("converter_diag pkg_attr", name, "error", repr(exc))
+          class Probe:
+              @e._ensure_torch_v2_installed()
+              def method(self, payload=None):
+                  return "method_ok"
           try:
-              _diag()
+              print("converter_diag method_result", Probe().method())
           except BaseException as exc:
-              import traceback
-              print("converter_diag decorator_failed", type(exc).__name__, repr(exc))
               traceback.print_exc()
-              raise
+              print("converter_diag method_failed", type(exc).__name__, repr(exc))
+          @e._ensure_torch_v2_installed()
+          def fn0():
+              return "fn0_ok"
+          try:
+              print("converter_diag fn0_result", fn0())
+          except BaseException as exc:
+              traceback.print_exc()
+              print("converter_diag fn0_failed", type(exc).__name__, repr(exc))
           PY
           "$WORK/venv/bin/mtk_pytorch_v2_converter" \
             --input_exported_program_file out/artifacts/qwen-exported-program.pt2 \
