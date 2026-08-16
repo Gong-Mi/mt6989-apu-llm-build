@@ -231,6 +231,7 @@ jobs:
           ]:
               s = s.replace(decorator, '')
           s = s.replace("out = ACT2FN[activation](out)", "out = torch.nn.functional.silu(out) if activation == \"silu\" else ACT2FN[activation](out)")
+          s = s.replace("ACT2FN[self.activation](gate.to(torch.float32))", "torch.nn.functional.silu(gate.to(torch.float32)) if self.activation == \"silu\" else ACT2FN[self.activation](gate.to(torch.float32))")
           p.write_text(s)
           print("patched_qwen35_torch23_export")
           PY
