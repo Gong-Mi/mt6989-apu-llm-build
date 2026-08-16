@@ -230,6 +230,7 @@ jobs:
               '@use_kernel_forward_from_hub("Qwen3_5GatedDeltaNet")\n',
           ]:
               s = s.replace(decorator, '')
+          s = s.replace("out = ACT2FN[activation](out)", "out = torch.nn.functional.silu(out) if activation == \"silu\" else ACT2FN[activation](out)")
           p.write_text(s)
           print("patched_qwen35_torch23_export")
           PY
