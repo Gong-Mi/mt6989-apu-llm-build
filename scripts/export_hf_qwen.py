@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 
 import torch
+if not hasattr(torch.nn, "Buffer") and hasattr(torch.nn.parameter, "Buffer"):
+    torch.nn.Buffer = torch.nn.parameter.Buffer
 from transformers import AutoModelForImageTextToText
 
 
