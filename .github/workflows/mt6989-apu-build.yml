@@ -179,7 +179,20 @@ jobs:
             'torch==2.3.1' \
             --index-url https://download.pytorch.org/whl/cpu
           python -m pip install --disable-pip-version-check \
-            'transformers==4.57.1' 'accelerate'
+            'transformers==5.15.0' 'huggingface-hub>=1.5.0' \
+            'tokenizers>=0.22.0' 'safetensors>=0.8.0' 'accelerate' \
+            --no-deps
+          python - <<'PY'
+          from pathlib import Path
+          import transformers
+          p = Path(transformers.__file__).parent / "utils" / "import_utils.py"
+          s = p.read_text()
+          old = 'TORCH_MINIMUM_VERSION = "2.5.0"'
+          if old not in s:
+              raise SystemExit("transformers torch version guard not found")
+          p.write_text(s.replace(old, 'TORCH_MINIMUM_VERSION = "2.3.0"'))
+          print("patched_transformers_torch_guard", p)
+          PY
           mkdir -p out/artifacts
           python scripts/export_hf_qwen.py \
             --model "$WORK/model/repo" \
