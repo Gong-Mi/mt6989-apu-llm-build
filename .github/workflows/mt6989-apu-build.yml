@@ -203,7 +203,7 @@ jobs:
           old = "if is_torch_distributed_available():"
           if old not in s:
               raise SystemExit("transformers DTensor guard not found")
-          p.write_text(s.replace(old, 'if is_torch_distributed_available() and hasattr(torch.distributed.tensor, "DTensor"):'))
+          p.write_text(s.replace(old, 'if is_torch_distributed_available() and hasattr(getattr(torch.distributed, "tensor", None), "DTensor"):'))
           print("patched_transformers_torch23_compat")
           PY
           mkdir -p out/artifacts
