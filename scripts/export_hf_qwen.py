@@ -41,7 +41,7 @@ def main():
         },
         strict=False,
     )
-    exported.save(args.output)
+    torch.export.save(exported, args.output)
     print("exported", args.output, Path(args.output).stat().st_size)
 
 
