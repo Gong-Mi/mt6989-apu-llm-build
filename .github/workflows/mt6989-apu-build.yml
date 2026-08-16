@@ -204,6 +204,12 @@ jobs:
           if old not in s:
               raise SystemExit("transformers DTensor guard not found")
           p.write_text(s.replace(old, 'if is_torch_distributed_available() and hasattr(getattr(torch.distributed, "tensor", None), "DTensor"):'))
+          p = root / "integrations" / "moe.py"
+          s = p.read_text()
+          old = "if is_torch_available():\n    torch.library.custom_op("
+          if old not in s:
+              raise SystemExit("transformers MoE custom_op block not found")
+          p.write_text(s.replace(old, 'if is_torch_available() and hasattr(torch.library, "custom_op"):\n    torch.library.custom_op('))
           print("patched_transformers_torch23_compat")
           PY
           mkdir -p out/artifacts
