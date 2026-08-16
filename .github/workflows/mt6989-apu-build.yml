@@ -175,17 +175,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install --disable-pip-version-check \
+          "$WORK/venv/bin/python" -m pip install --disable-pip-version-check \
             'torch==2.3.1' \
             --index-url https://download.pytorch.org/whl/cpu
-          python -m pip install --disable-pip-version-check \
+          "$WORK/venv/bin/python" -m pip install --disable-pip-version-check \
             'transformers==5.15.0' 'huggingface-hub>=1.5.0' \
             'tokenizers==0.22.2' 'safetensors>=0.8.0' 'accelerate' \
             'packaging' 'pyyaml' 'regex' 'requests' 'tqdm' 'numpy' \
             'httpx' 'httpcore' 'h11' 'anyio' 'certifi' 'idna' \
             --no-deps
           export TRANSFORMERS_DISABLE_TORCH_CHECK=1
-          python - <<'PY'
+          "$WORK/venv/bin/python" - <<'PY'
           from pathlib import Path
           import site
           root = Path(site.getsitepackages()[0]) / "transformers"
@@ -244,7 +244,7 @@ jobs:
           print("patched_torch23_export_bool_argument")
           PY
           mkdir -p out/artifacts
-          python scripts/export_hf_qwen.py \
+          "$WORK/venv/bin/python" scripts/export_hf_qwen.py \
             --model "$WORK/model/repo" \
             --output out/artifacts/qwen-exported-program.pt2
           "$WORK/venv/bin/python" - <<'PY'
