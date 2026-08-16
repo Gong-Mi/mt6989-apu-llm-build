@@ -234,15 +234,13 @@ jobs:
           s = s.replace("ACT2FN[self.activation](gate.to(torch.float32))", "torch.nn.functional.silu(gate.to(torch.float32)) if self.activation == \"silu\" else ACT2FN[self.activation](gate.to(torch.float32))")
           p.write_text(s)
           import torch as _torch
+          import re
           p = Path(_torch.__file__).parent / "_export" / "serde" / "serialize.py"
           s = p.read_text()
-          old = 'elif arg.type in ("as_none", "as_int", "as_float", "as_string", "as_custom_obj"): '
-          new = 'elif arg.type in ("as_none", "as_int", "as_float", "as_string", "as_bool", "as_custom_obj"): '
-          if old not in s:
-              old = 'elif arg.type in ("as_none", "as_int", "as_float", "as_string", "as_custom_obj"): '
-          if old not in s:
+          s, count = re.subn(r'(?m)^\s*elif arg\.type in \([^\n]*\):$', '            elif arg.type in ("as_none", "as_int", "as_float", "as_string", "as_bool", "as_custom_obj"):', s, count=1)
+          if count != 1:
               raise SystemExit("torch export bool argument branch not found")
-          p.write_text(s.replace(old, new))
+          p.write_text(s)
           print("patched_torch23_export_bool_argument")
           PY
           mkdir -p out/artifacts
