@@ -28,7 +28,7 @@ def main():
     print("model", model_dir)
     print("config", json.loads((model_dir / "config.json").read_text()).get("architectures"))
 
-    model = AutoModelForImageTextToText.from_pretrained(
+    model = AutoModelForCausalLM.from_pretrained(
         str(model_dir),
         torch_dtype=torch.bfloat16,
         low_cpu_mem_usage=True,
