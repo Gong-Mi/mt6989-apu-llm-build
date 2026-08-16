@@ -164,6 +164,8 @@ jobs:
           "$WORK/venv/bin/python" -m pip install --disable-pip-version-check "$WHEEL"
           "$WORK/venv/bin/python" -c 'import mtk_converter; print("mtk_converter_import=ok")'
           "$WORK/venv/bin/mtk_dissect_tflite_model" --help > out/mtk_dissect_tflite_model.help.txt
+          "$WORK/venv/bin/mtk_pytorch_converter" --help > out/mtk_pytorch_converter.help.txt 2>&1 || true
+          "$WORK/venv/bin/mtk_pytorch_v2_converter" --help > out/mtk_pytorch_v2_converter.help.txt 2>&1 || true
           mkdir -p out/artifacts
           cp tests/models/float_bmm.tflite out/artifacts/
           sha256sum out/artifacts/float_bmm.tflite | tee out/artifacts.sha256
