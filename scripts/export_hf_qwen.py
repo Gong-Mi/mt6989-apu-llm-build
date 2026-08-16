@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import types
 from pathlib import Path
 
 import torch
@@ -50,16 +51,10 @@ def main():
     rope_cos = rope_cos.to(dtype=rope_dtype)
     rope_sin = rope_sin.to(dtype=rope_dtype)
 
-    class _FrozenRotary(torch.nn.Module):
-        def __init__(self, cos, sin):
-            super().__init__()
-            self.register_buffer("cos", cos)
-            self.register_buffer("sin", sin)
+    def _frozen_rope_forward(_self, *args, **kwargs):
+        return rope_cos, rope_sin
 
-        def forward(self, *args, **kwargs):
-            return self.cos, self.sin
-
-    model.model.rotary_emb = _FrozenRotary(rope_cos, rope_sin)
+    rotary.forward = types.MethodType(_frozen_rope_forward, rotary)
 
     class _LogitsOnly(torch.nn.Module):
         def __init__(self, m):
