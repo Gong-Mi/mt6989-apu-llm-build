@@ -46,8 +46,9 @@ def main():
     position_ids = torch.arange(args.seq_len, dtype=torch.long).unsqueeze(0)
     with torch.no_grad():
         rope_cos, rope_sin = rotary(input_ids, position_ids)
-    rope_cos = rope_cos.to(torch.float32)
-    rope_sin = rope_sin.to(torch.float32)
+    rope_dtype = next(model.parameters()).dtype
+    rope_cos = rope_cos.to(dtype=rope_dtype)
+    rope_sin = rope_sin.to(dtype=rope_dtype)
 
     def _frozen_rope_forward(*args, **kwargs):
         return rope_cos, rope_sin
